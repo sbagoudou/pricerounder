@@ -288,7 +288,6 @@ function testNormalization() {
 - [ ] Add unit price filtering (skip €/kg, €/L prices)
 - [ ] Improve bundle pricing detection
 - [ ] Add support for more currencies (¥, ₹, etc.)
-- [ ] Firefox official release (signed)
 
 ### Version 1.2 (Planned)
 - [ ] Custom rounding rules per site
