@@ -106,7 +106,8 @@
     span.className = 'price-rounder-modified';
 
     if (settings.showOriginal) {
-      span.innerHTML = `<span style="text-decoration: line-through; opacity: 0.6;">${originalText}</span> <span style="font-weight: bold; color: #2563eb;">${currency}${roundedText}</span>`;
+      // Show original in small parentheses
+      span.innerHTML = `<span style="font-weight: bold; color: #2563eb;">${currency}${roundedText}</span> <span style="font-size: 0.75em; color: #888;">(${originalText})</span>`;
     } else {
       span.innerHTML = `<span style="font-weight: bold;">${currency}${roundedText}</span>`;
     }
@@ -121,7 +122,7 @@
     let parent = node.parentElement;
     while (parent && parent !== document.body) {
       if (parent.classList?.contains('a-price')) return; // Amazon
-      if (parent.classList?.contains('c-price')) return; // Cdiscount
+      if (parent.classList?.contains('c-price') || parent.classList?.contains('c-price-s')) return; // Cdiscount
       if (parent.classList?.contains('f-faPriceBox__price')) return; // Fnac
       if (parent.classList?.contains('price-rounder-modified')) return;
       if (parent.hasAttribute?.('data-price-rounded')) return;
@@ -329,11 +330,11 @@
           const formattedRounded = formatPrice(roundedPrice);
           const styledPrice = createStyledPrice(match[0], formattedRounded + ' €', '');
 
-          // Find and hide only the <s> tag or direct price text, keep other children visible
+          // Find and replace the <s> tag or direct price text, keep other children visible
           const sTag = priceElement.querySelector('s');
           if (sTag) {
-            sTag.style.display = 'none';
-            priceElement.insertBefore(styledPrice, sTag);
+            // Replace the <s> tag content with our styled price
+            sTag.replaceWith(styledPrice);
           } else {
             // If no <s> tag, hide entire element
             priceElement.style.display = 'none';
@@ -387,14 +388,14 @@
 
     // Skip if this element contains site-specific price children (already handled)
     if (priceElement.querySelector('.a-price')) return;
-    if (priceElement.querySelector('.c-price')) return;
+    if (priceElement.querySelector('.c-price, .c-price-s')) return;
     if (priceElement.querySelector('.f-faPriceBox__price')) return;
     if (priceElement.querySelector('.price-rounder-modified')) return;
 
     // Skip if parent is a site-specific price element
     let parent = priceElement.parentElement;
     while (parent) {
-      if (parent.classList?.contains('c-price')) return;
+      if (parent.classList?.contains('c-price') || parent.classList?.contains('c-price-s')) return;
       if (parent.classList?.contains('a-price')) return;
       if (parent.classList?.contains('f-faPriceBox__price')) return;
       parent = parent.parentElement;
@@ -456,7 +457,7 @@
     fnacPrices.forEach(processFnacPrice);
 
     // Handle Cdiscount-specific price elements
-    const cdiscountPrices = element.querySelectorAll ? element.querySelectorAll('.c-price') : [];
+    const cdiscountPrices = element.querySelectorAll ? element.querySelectorAll('.c-price, .c-price-s') : [];
     cdiscountPrices.forEach(processCdiscountPrice);
 
     // Handle simple price elements (legacy and other patterns)
