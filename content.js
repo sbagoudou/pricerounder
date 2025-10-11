@@ -96,35 +96,34 @@
     }
   }
 
-  function formatPrice(price, originalFormat) {
-    // Try to maintain original formatting style
-    if (originalFormat.includes(',') && !originalFormat.includes('.')) {
-      return price.toFixed(0);
-    }
-    return price.toFixed(2);
+  function formatPrice(price) {
+    // Always return whole numbers for rounded prices
+    return Math.round(price).toString();
   }
 
   function createStyledPrice(originalText, roundedText, currency) {
     const span = document.createElement('span');
     span.className = 'price-rounder-modified';
-    
+
     if (settings.showOriginal) {
-      span.innerHTML = `<span style="text-decoration: line-through; opacity: 0.6; font-size: 0.9em;">${originalText}</span> <span style="font-weight: bold; color: #2563eb;">${currency}${roundedText}</span>`;
+      span.innerHTML = `<span style="text-decoration: line-through; opacity: 0.6;">${originalText}</span> <span style="font-weight: bold; color: #2563eb;">${currency}${roundedText}</span>`;
     } else {
       span.innerHTML = `<span style="font-weight: bold;">${currency}${roundedText}</span>`;
     }
-    
+
     return span;
   }
 
   function processTextNode(node) {
     if (node.nodeType !== Node.TEXT_NODE) return;
-    if (node.parentElement?.classList?.contains('price-rounder-modified')) return;
 
-    // Skip text nodes inside .a-price elements (handled by processAmazonPrice)
+    // Skip text nodes inside site-specific price elements (handled by dedicated handlers)
     let parent = node.parentElement;
-    while (parent) {
-      if (parent.classList?.contains('a-price')) return;
+    while (parent && parent !== document.body) {
+      if (parent.classList?.contains('a-price')) return; // Amazon
+      if (parent.classList?.contains('c-price')) return; // Cdiscount
+      if (parent.classList?.contains('f-faPriceBox__price')) return; // Fnac
+      if (parent.classList?.contains('price-rounder-modified')) return;
       if (parent.hasAttribute?.('data-price-rounded')) return;
       parent = parent.parentElement;
     }
@@ -161,7 +160,7 @@
             
             // Add styled price
             const currencySymbol = match[0].charAt(0);
-            const formattedRounded = formatPrice(roundedPrice, originalPrice);
+            const formattedRounded = formatPrice(roundedPrice);
             newContent.appendChild(createStyledPrice(match[0], formattedRounded, currencySymbol));
             
             lastIndex = match.index + match[0].length;
@@ -235,7 +234,7 @@
       if (shouldRound) {
         const roundedPrice = roundPrice(price);
         if (roundedPrice !== price) {
-          const formattedRounded = formatPrice(roundedPrice, priceStr);
+          const formattedRounded = formatPrice(roundedPrice);
           const originalDisplay = priceStr.replace('.', ',') + ' ' + currency;
           const styledPrice = createStyledPrice(originalDisplay, formattedRounded + ' ' + currency, '');
 
@@ -278,6 +277,79 @@
     return null;
   }
 
+  function processCdiscountPrice(priceElement) {
+    // Cdiscount uses .c-price with two formats:
+    // 1. Split format: "949€" + span with "99"
+    // 2. Standard format: "999,99€" inside <s> or direct text
+    if (priceElement.classList?.contains('price-rounder-modified')) return;
+    if (priceElement.hasAttribute('data-price-rounded')) return;
+
+    priceElement.setAttribute('data-price-rounded', 'true');
+
+    // Try split price format first
+    const textNodes = Array.from(priceElement.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
+    const spanNodes = priceElement.querySelectorAll('span[itemprop="priceCurrency"]');
+
+    if (textNodes.length > 0 && spanNodes.length > 0) {
+      const wholeText = textNodes[0].textContent.trim(); // e.g., "949€"
+      const centsText = spanNodes[0].textContent.trim(); // e.g., "99"
+
+      const wholeMatch = wholeText.match(/(\d+)€?/);
+      if (wholeMatch && centsText.match(/^\d{2}$/)) {
+        const priceStr = wholeMatch[1] + '.' + centsText;
+        const price = normalizePrice(priceStr);
+        const originalDisplay = wholeText + centsText;
+
+        if (price && /\.(9[0-9]|[0-9]9)$/.test(price.toFixed(2))) {
+          const roundedPrice = roundPrice(price);
+          if (roundedPrice !== price) {
+            const formattedRounded = formatPrice(roundedPrice);
+            const styledPrice = createStyledPrice(originalDisplay, formattedRounded + ' €', '');
+
+            priceElement.style.display = 'none';
+            priceElement.parentNode.insertBefore(styledPrice, priceElement);
+            priceElement.classList.add('price-rounder-modified');
+            return;
+          }
+        }
+      }
+    }
+
+    // Try standard format (with comma decimal)
+    const priceText = priceElement.textContent.trim();
+    const match = priceText.match(/(\d{1,3}(?:[\s.]\d{3})*,\d{2})\s?€/);
+
+    if (match) {
+      const priceStr = match[1];
+      const price = normalizePrice(priceStr);
+
+      if (price && /\.(9[0-9]|[0-9]9)$/.test(price.toFixed(2))) {
+        const roundedPrice = roundPrice(price);
+        if (roundedPrice !== price) {
+          const formattedRounded = formatPrice(roundedPrice);
+          const styledPrice = createStyledPrice(match[0], formattedRounded + ' €', '');
+
+          // Find and hide only the <s> tag or direct price text, keep other children visible
+          const sTag = priceElement.querySelector('s');
+          if (sTag) {
+            sTag.style.display = 'none';
+            priceElement.insertBefore(styledPrice, sTag);
+          } else {
+            // If no <s> tag, hide entire element
+            priceElement.style.display = 'none';
+            priceElement.parentNode.insertBefore(styledPrice, priceElement);
+          }
+
+          priceElement.classList.add('price-rounder-modified');
+          return;
+        }
+      }
+    }
+
+    // If no format matched, remove the marker
+    priceElement.removeAttribute('data-price-rounded');
+  }
+
   function processFnacPrice(priceElement) {
     // Fnac uses .f-faPriceBox__price with specific structure
     if (priceElement.classList?.contains('price-rounder-modified')) return;
@@ -295,7 +367,7 @@
       if (price && /\.(9[0-9]|[0-9]9)$/.test(price.toFixed(2))) {
         const roundedPrice = roundPrice(price);
         if (roundedPrice !== price) {
-          const formattedRounded = formatPrice(roundedPrice, priceStr);
+          const formattedRounded = formatPrice(roundedPrice);
           const styledPrice = createStyledPrice(priceText, formattedRounded + ' €', '');
 
           priceElement.style.display = 'none';
@@ -313,8 +385,20 @@
     if (priceElement.hasAttribute('data-price-rounded')) return;
     if (!priceElement.textContent.trim()) return;
 
-    // Skip if this element contains .a-price children (already handled by processAmazonPrice)
+    // Skip if this element contains site-specific price children (already handled)
     if (priceElement.querySelector('.a-price')) return;
+    if (priceElement.querySelector('.c-price')) return;
+    if (priceElement.querySelector('.f-faPriceBox__price')) return;
+    if (priceElement.querySelector('.price-rounder-modified')) return;
+
+    // Skip if parent is a site-specific price element
+    let parent = priceElement.parentElement;
+    while (parent) {
+      if (parent.classList?.contains('c-price')) return;
+      if (parent.classList?.contains('a-price')) return;
+      if (parent.classList?.contains('f-faPriceBox__price')) return;
+      parent = parent.parentElement;
+    }
 
     // Try data attributes first (most reliable)
     const dataPrice = detectDataAttributePrice(priceElement);
@@ -344,7 +428,7 @@
     if (shouldRound) {
       const roundedPrice = roundPrice(price);
       if (roundedPrice !== price) {
-        const formattedRounded = formatPrice(roundedPrice, price.toString());
+        const formattedRounded = formatPrice(roundedPrice);
         const styledPrice = createStyledPrice(originalDisplay, formattedRounded + ' ' + currency, '');
 
         priceElement.style.display = 'none';
@@ -370,6 +454,10 @@
     // Handle Fnac-specific price elements
     const fnacPrices = element.querySelectorAll ? element.querySelectorAll('.f-faPriceBox__price') : [];
     fnacPrices.forEach(processFnacPrice);
+
+    // Handle Cdiscount-specific price elements
+    const cdiscountPrices = element.querySelectorAll ? element.querySelectorAll('.c-price') : [];
+    cdiscountPrices.forEach(processCdiscountPrice);
 
     // Handle simple price elements (legacy and other patterns)
     const simplePriceSelectors = [
