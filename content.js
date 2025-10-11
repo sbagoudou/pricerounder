@@ -12,7 +12,7 @@
 
   // French-specific price selectors
   const FRENCH_PRICE_SELECTORS = [
-    '.prix', '.produit-prix', '.prix-actuel', '.prix-promo', '.prix-final',
+    '.prix', '.price', '.produit-prix', '.prix-actuel', '.prix-promo', '.prix-final',
     '.f-faPriceBox__price', '.userPrice', '.Article-price', // Fnac
     '.product-price', '.price-current', '.price-value', // Cdiscount
     '.price-amount', '.price-final', '.price-block', // Darty
@@ -98,7 +98,9 @@
 
   function formatPrice(price) {
     // Always return whole numbers for rounded prices
-    return Math.round(price).toString();
+    // Ensure price is a number before formatting
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    return Math.round(numPrice).toString();
   }
 
   function createStyledPrice(originalText, roundedText, currency) {
@@ -269,8 +271,13 @@
     for (const attr of dataAttrs) {
       const value = element.getAttribute(attr);
       if (value) {
-        const price = normalizePrice(value);
+        let price = normalizePrice(value);
         if (price !== null) {
+          // Check if price is in cents (integer >= 1000 with no decimals)
+          // E.g., data-price="39999" should be 399.99, not 39999
+          if (price >= 1000 && Number.isInteger(price)) {
+            price = price / 100;
+          }
           return { price, attribute: attr };
         }
       }
@@ -386,6 +393,12 @@
     if (priceElement.hasAttribute('data-price-rounded')) return;
     if (!priceElement.textContent.trim()) return;
 
+    // Skip container elements (product cards, lists, etc.) - only process actual price elements
+    if (priceElement.tagName === 'LI' || priceElement.tagName === 'ARTICLE' || priceElement.tagName === 'SECTION') return;
+
+    // Skip if element has too many children (likely a container, not a price element)
+    if (priceElement.children.length > 3) return;
+
     // Skip if this element contains site-specific price children (already handled)
     if (priceElement.querySelector('.a-price')) return;
     if (priceElement.querySelector('.c-price, .c-price-s')) return;
@@ -401,25 +414,35 @@
       parent = parent.parentElement;
     }
 
-    // Try data attributes first (most reliable)
-    const dataPrice = detectDataAttributePrice(priceElement);
+    // Parse from text content first for simple price elements
+    const text = priceElement.textContent.trim();
+    const match = text.match(/([€$£])\s?(\d{1,3}(?:[.,\s]\d{3})*[.,]\d{2})|(\d{1,3}(?:[.,\s]\d{3})*[.,]\d{2})\s?([€$£])/);
+
     let price, currency, originalDisplay;
 
-    if (dataPrice) {
-      price = dataPrice.price;
-      currency = '€'; // Default to EUR for French sites
-      originalDisplay = priceElement.textContent.trim();
-    } else {
-      // Fall back to text content parsing
-      const text = priceElement.textContent.trim();
-      const match = text.match(/([€$£])\s?(\d{1,3}(?:[.,\s]\d{3})*[.,]\d{2})|(\d{1,3}(?:[.,\s]\d{3})*[.,]\d{2})\s?([€$£])/);
-
-      if (!match) return;
-
+    if (match) {
+      // Text content has a clear price format - use it directly
       currency = match[1] || match[4];
       const priceStr = match[2] || match[3];
       price = normalizePrice(priceStr);
-      originalDisplay = text;
+      originalDisplay = match[0];
+    } else {
+      // Fall back to data attributes if text parsing fails
+      const dataPrice = detectDataAttributePrice(priceElement);
+      if (dataPrice) {
+        price = dataPrice.price;
+        currency = '€'; // Default to EUR for French sites
+        // Try to extract price from text - look for European format with comma
+        const priceMatch = text.match(/(\d{1,3}(?:[\s.]\d{3})*[.,]\d{2})\s?€/);
+        if (priceMatch) {
+          originalDisplay = priceMatch[0];
+        } else {
+          // Format the price in French style: 399,99 €
+          originalDisplay = price.toFixed(2).replace('.', ',') + ' €';
+        }
+      } else {
+        return;
+      }
     }
 
     if (price === null) return;
@@ -430,10 +453,12 @@
       const roundedPrice = roundPrice(price);
       if (roundedPrice !== price) {
         const formattedRounded = formatPrice(roundedPrice);
-        const styledPrice = createStyledPrice(originalDisplay, formattedRounded + ' ' + currency, '');
+        const roundedText = formattedRounded + ' ' + currency;
+        const styledPrice = createStyledPrice(originalDisplay, roundedText, '');
 
-        priceElement.style.display = 'none';
-        priceElement.parentNode.insertBefore(styledPrice, priceElement);
+        // Replace the element's content
+        priceElement.innerHTML = '';
+        priceElement.appendChild(styledPrice);
         priceElement.classList.add('price-rounder-modified');
         priceElement.setAttribute('data-price-rounded', 'true');
       }
