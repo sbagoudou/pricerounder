@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Price Rounder",
+  "version": "1.0",
+  "description": "Rounds psychological pricing to help you see the real price",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icons/icon.svg"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "128": "icons/icon.svg"
+  }
+}

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+    }
+    
+    h1 {
+      font-size: 18px;
+      margin: 0 0 16px 0;
+      color: #1f2937;
+    }
+    
+    .setting {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+    }
+    
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+    }
+    
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #cbd5e1;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: #2563eb;
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+    
+    select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      background-color: white;
+      cursor: pointer;
+    }
+    
+    select:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .info {
+      margin-top: 16px;
+      padding: 12px;
+      background-color: #eff6ff;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #1e40af;
+      border-left: 3px solid #2563eb;
+    }
+    
+    .status {
+      text-align: center;
+      padding: 8px;
+      background-color: #f0fdf4;
+      color: #15803d;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-top: 12px;
+      display: none;
+    }
+    
+    .status.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚡ Price Rounder</h1>
+  
+  <div class="setting">
+    <div class="toggle-container">
+      <label for="enabled">Enable Extension</label>
+      <label class="switch">
+        <input type="checkbox" id="enabled" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+  
+  <div class="setting">
+    <label for="roundingMode">Rounding Mode</label>
+    <select id="roundingMode">
+      <option value="up">Always Round Up</option>
+      <option value="nearest">Round to Nearest</option>
+      <option value="nearest5">Round to Nearest 5</option>
+      <option value="nearest10">Round to Nearest 10</option>
+    </select>
+  </div>
+  
+  <div class="setting">
+    <div class="toggle-container">
+      <label for="showOriginal">Show Original Price</label>
+      <label class="switch">
+        <input type="checkbox" id="showOriginal" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+  
+  <div class="info">
+    💡 Refresh the page after changing settings to see the effect.
+  </div>
+  
+  <div id="status" class="status">
+    Settings saved!
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
