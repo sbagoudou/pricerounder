@@ -333,7 +333,7 @@
           // Find and replace the <s> tag or direct price text, keep other children visible
           const sTag = priceElement.querySelector('s');
           if (sTag) {
-            // Replace the <s> tag content with our styled price
+            // Replace the <s> tag content with the styled price
             sTag.replaceWith(styledPrice);
           } else {
             // If no <s> tag, hide entire element
