@@ -24,7 +24,7 @@ Retailers use psychological pricing (ending prices in .99, .95, .90) to make pro
   - Round to nearest (29.49 → 29, 29.50 → 30)
   - Round to nearest 5 (29.99 → 30, 32.99 → 35)
   - Round to nearest 10 (29.99 → 30, 34.99 → 40)
-- ✅ **Show Original Prices** - Toggle strikethrough display of original prices
+- ✅ **Show Original Prices** - Toggle display of original prices in small parentheses
 - ✅ **Dynamic Content Support** - Works with AJAX/SPA sites
 - ✅ **Clean UI** - Simple popup interface with intuitive controls
 
@@ -74,7 +74,7 @@ Toggle the extension on or off without uninstalling it.
 - **Nearest 10** - Rounds to nearest multiple of 10 (29.99 → 30, 34.99 → 40)
 
 #### Show Original Price
-Toggle to show/hide the original price with a strikethrough style.
+Toggle to show/hide the original price in small parentheses next to the rounded price.
 
 ### Example
 
@@ -85,11 +85,11 @@ Product B: €54.90
 Product C: €19.95
 ```
 
-**After (Round Up mode):**
+**After (Round Up mode with "Show Original" enabled):**
 ```
-Product A: €29.99 €30 (with original struck through)
-Product B: €54.90 €55
-Product C: €19.95 €20
+Product A: €30 (€29.99)
+Product B: €55 (€54.90)
+Product C: €20 (€19.95)
 ```
 
 ## 🌍 Supported Sites
@@ -116,16 +116,20 @@ The extension uses multiple detection methods and should work on most e-commerce
 
 ```
 pricerounder/
-├── manifest.json           # Extension configuration
-├── content.js             # Main logic (price detection & rounding)
-├── popup.html             # Settings UI
-├── popup.js               # Popup functionality
-├── icons/
-│   └── icon.svg          # Extension icon
-├── README.md              # This file
-├── FRENCH_ECOMMERCE_PRICE_STRUCTURES.md  # Site analysis
-├── IMPLEMENTATION_GUIDE_FR.md            # Developer guide
-└── HTML_EXAMPLES_FR.md                   # Test cases
+├── manifest.json                          # Extension configuration (Manifest V3)
+├── content.js                             # Main logic (modular architecture)
+├── popup.html                             # Settings UI
+├── popup.js                               # Popup functionality
+├── icons/                                 # Extension icons
+│   ├── icon16.png
+│   ├── icon48.png
+│   └── icon128.png
+├── create_icons.html                      # Icon generator utility
+├── README.md                              # This file
+├── REFACTORING_SUMMARY.md                 # Code refactoring details
+├── FRENCH_ECOMMERCE_PRICE_STRUCTURES.md   # Site analysis
+├── IMPLEMENTATION_GUIDE_FR.md             # Developer guide
+└── HTML_EXAMPLES_FR.md                    # Test cases
 ```
 
 ### How It Works
@@ -150,6 +154,46 @@ pricerounder/
    - Accessibility features
 
 5. **Dynamic Monitoring**: Uses MutationObserver to handle AJAX-loaded content
+
+### Code Architecture
+
+The extension uses a modular architecture within a single file for optimal compatibility:
+
+#### Modules
+
+- **Config Module** - Centralized constants and configuration
+  - Currency patterns and symbols
+  - Site-specific selectors (Amazon, Cdiscount, Fnac, Darty)
+  - Style configurations and thresholds
+
+- **Utils Module** - Reusable utility functions
+  - `normalizePrice()` - Handles EU/US number formatting
+  - `roundPrice()` - Multiple rounding modes
+  - `formatPrice()` - Display formatting
+  - `createStyledPrice()` - DOM element creation
+  - `detectDataAttributePrice()` - Data attribute parsing
+
+- **Handlers Module** - Site-specific price processing
+  - `BasePriceHandler` - Base class with shared functionality
+  - `AmazonPriceHandler` - Amazon's complex structure
+  - `CdiscountPriceHandler` - Split/standard formats
+  - `FnacPriceHandler` - Fnac-specific handling
+  - `SimplePriceHandler` - Generic price elements
+
+- **Main Module** - Extension orchestration
+  - Settings management
+  - DOM element processing
+  - MutationObserver setup
+  - Event listeners
+
+#### Benefits
+
+- **No duplication** - Base class eliminates repeated code
+- **Error handling** - Try-catch blocks throughout
+- **Maintainability** - Easy to add new sites/currencies
+- **Clear structure** - Each module has a single responsibility
+
+See [REFACTORING_SUMMARY.md](./REFACTORING_SUMMARY.md) for detailed architecture documentation.
 
 ### Supported Price Formats
 
@@ -325,13 +369,23 @@ Contributions are welcome! Here's how you can help:
 ### Add Support for New Sites
 
 1. Analyze the site's HTML structure (see `IMPLEMENTATION_GUIDE_FR.md`)
-2. Add site-specific selectors to `FRENCH_PRICE_SELECTORS`
-3. Create a handler function if needed (like `processFnacPrice`)
-4. Test thoroughly
-5. Submit PR with examples
+2. Add site-specific selectors to `Config.FRENCH_PRICE_SELECTORS` in [content.js](content.js)
+3. If needed, create a new handler class extending `BasePriceHandler`:
+   ```javascript
+   class NewSiteHandler extends BasePriceHandler {
+     process(priceElement) {
+       // Site-specific logic here
+     }
+   }
+   ```
+4. Register the handler in the `initialize()` function
+5. Test thoroughly on the target site
+6. Submit PR with examples and screenshots
 
 ## 📚 Documentation
 
+- **[README.md](./README.md)** - This file (user guide and overview)
+- **[REFACTORING_SUMMARY.md](./REFACTORING_SUMMARY.md)** - Code architecture and refactoring details
 - **[FRENCH_ECOMMERCE_PRICE_STRUCTURES.md](./FRENCH_ECOMMERCE_PRICE_STRUCTURES.md)** - Analysis of top 10 French e-commerce sites
 - **[IMPLEMENTATION_GUIDE_FR.md](./IMPLEMENTATION_GUIDE_FR.md)** - Developer guide with code examples
 - **[HTML_EXAMPLES_FR.md](./HTML_EXAMPLES_FR.md)** - Real-world HTML test cases
