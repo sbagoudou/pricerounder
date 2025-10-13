@@ -686,7 +686,10 @@
         if (parent.classList?.contains('c-price') || parent.classList?.contains('c-price-s')) return;
         if (parent.classList?.contains('f-faPriceBox__price')) return;
         if (parent.classList?.contains('price-rounder-modified')) return;
+        if (parent.classList?.contains('VbBaOe')) return; // Google Shopping prices
         if (parent.hasAttribute?.('data-price-rounded')) return;
+        // Skip if parent is a strikethrough price (often old prices on Amazon)
+        if (parent.tagName === 'S' || parent.classList?.contains('a-text-strike')) return;
         parent = parent.parentElement;
       }
 
