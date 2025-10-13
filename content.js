@@ -80,7 +80,8 @@
     DEFAULT_SETTINGS: {
       enabled: true,
       roundingMode: 'up',
-      showOriginal: true
+      showOriginal: true,
+      centsThreshold: 90
     },
 
     // Psychological pricing pattern
@@ -215,12 +216,20 @@
     },
 
     /**
-     * Checks if a price should be rounded
+     * Checks if a price should be rounded based on cents threshold
      */
-    shouldRoundPrice(price) {
+    shouldRoundPrice(price, centsThreshold = 90) {
       try {
-        return Config.PSYCHOLOGICAL_PRICING_PATTERN.test(price.toFixed(2)) ||
-               (price % 1 === 0 && price > 0);
+        // If price is already a whole number, no need to round
+        if (price % 1 === 0) {
+          return false;
+        }
+
+        // Get the cents part (e.g., 51.49 → 49, 399.99 → 99)
+        const cents = Math.round((price % 1) * 100);
+
+        // Round if cents meet or exceed the threshold
+        return cents >= centsThreshold;
       } catch (error) {
         console.error('[Price Rounder] Error checking if price should round:', error);
         return false;
@@ -291,10 +300,12 @@
      */
     validateSettings(settings) {
       const validModes = ['up', 'nearest', 'nearest5', 'nearest10'];
+      const validThresholds = [0, 50, 80, 90, 95];
       return {
         enabled: typeof settings.enabled === 'boolean' ? settings.enabled : true,
         roundingMode: validModes.includes(settings.roundingMode) ? settings.roundingMode : 'up',
-        showOriginal: typeof settings.showOriginal === 'boolean' ? settings.showOriginal : true
+        showOriginal: typeof settings.showOriginal === 'boolean' ? settings.showOriginal : true,
+        centsThreshold: validThresholds.includes(settings.centsThreshold) ? settings.centsThreshold : 90
       };
     }
   };
@@ -321,7 +332,7 @@
 
     processPrice(price, originalDisplay, currency) {
       try {
-        if (!Utils.shouldRoundPrice(price)) {
+        if (!Utils.shouldRoundPrice(price, this.settings.centsThreshold)) {
           return null;
         }
 
@@ -430,30 +441,70 @@
       this.markProcessing(priceElement);
 
       try {
-        const textNodes = Array.from(priceElement.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
-        const spanNodes = priceElement.querySelectorAll('span[itemprop="priceCurrency"]');
+        // Handle the complex nested structure with separate whole and cents parts
+        const ariaHidden = priceElement.querySelector('[aria-hidden="true"]');
+        const displayPrice = priceElement.querySelector('#DisplayPrice, [id^="DisplayPrice"]');
+        const displayCents = priceElement.querySelector('#DisplayPriceCent, [id^="DisplayPriceCent"]');
 
-        if (textNodes.length > 0 && spanNodes.length > 0) {
-          const wholeText = textNodes[0].textContent.trim();
-          const centsText = spanNodes[0].textContent.trim();
+        if (displayPrice && displayCents && ariaHidden) {
+          // This is a main price with complex structure - update the display elements directly
+          const wholeText = displayPrice.textContent.trim();
+          const centsText = displayCents.textContent.replace('€', '').trim();
 
-          const wholeMatch = wholeText.match(/(\d+)€?/);
-          if (wholeMatch && centsText.match(/^\d{2}$/)) {
-            const priceStr = wholeMatch[1] + '.' + centsText;
-            const price = Utils.normalizePrice(priceStr);
-            const originalDisplay = wholeText + centsText;
+          const priceStr = wholeText + '.' + centsText;
+          const price = Utils.normalizePrice(priceStr);
 
-            const styledPrice = this.processPrice(price, originalDisplay, '€');
+          if (price !== null && Utils.shouldRoundPrice(price, this.settings.centsThreshold)) {
+            const roundedPrice = Utils.roundPrice(price, this.settings.roundingMode);
 
-            if (styledPrice) {
-              priceElement.style.display = 'none';
-              priceElement.parentNode.insertBefore(styledPrice, priceElement);
+            if (roundedPrice !== price) {
+              const formattedRounded = Utils.formatPrice(roundedPrice);
+              const originalText = wholeText + ',' + centsText + ' €';
+
+              // Update the visible parts with styling
+              displayPrice.textContent = formattedRounded;
+              displayPrice.style.color = '#2563eb';
+              displayPrice.style.fontWeight = 'bold';
+
+              // Hide the cents part since rounded prices don't have cents
+              const supElement = displayCents.parentElement;
+              if (supElement && supElement.tagName === 'SUP') {
+                supElement.style.display = 'none';
+              }
+
+              // Update the hidden accessible text
+              const hiddenSpan = priceElement.querySelector('.u-visually-hidden');
+              if (hiddenSpan) {
+                if (this.settings.showOriginal) {
+                  hiddenSpan.textContent = formattedRounded + ' € (original: ' + originalText + ')';
+                } else {
+                  hiddenSpan.textContent = formattedRounded + ' €';
+                }
+              }
+
+              // Add original price indicator after the price if showOriginal is enabled
+              if (this.settings.showOriginal && !ariaHidden.querySelector('.price-rounder-original')) {
+                const originalIndicator = document.createElement('span');
+                originalIndicator.className = 'price-rounder-original';
+                originalIndicator.style.fontSize = '0.5em';
+                originalIndicator.style.color = '#888';
+                originalIndicator.style.fontWeight = 'normal';
+                originalIndicator.style.marginLeft = '8px';
+                originalIndicator.style.verticalAlign = 'middle';
+                originalIndicator.textContent = '(' + originalText + ')';
+                ariaHidden.appendChild(originalIndicator);
+              }
+
               Utils.markAsProcessed(priceElement);
               return;
             }
           }
+
+          Utils.unmarkAsProcessed(priceElement);
+          return;
         }
 
+        // Handle simple price text with <s> tag (strikethrough prices)
         const priceText = priceElement.textContent.trim();
         const match = priceText.match(/(\d{1,3}(?:[\s.]\d{3})*,\d{2})\s?€/);
 
@@ -461,19 +512,35 @@
           const priceStr = match[1];
           const price = Utils.normalizePrice(priceStr);
 
-          const styledPrice = this.processPrice(price, match[0], '€');
+          if (price !== null && Utils.shouldRoundPrice(price, this.settings.centsThreshold)) {
+            const roundedPrice = Utils.roundPrice(price, this.settings.roundingMode);
 
-          if (styledPrice) {
-            const sTag = priceElement.querySelector('s');
-            if (sTag) {
-              sTag.replaceWith(styledPrice);
-            } else {
-              priceElement.style.display = 'none';
-              priceElement.parentNode.insertBefore(styledPrice, priceElement);
+            if (roundedPrice !== price) {
+              const formattedRounded = Utils.formatPrice(roundedPrice);
+              const originalText = match[0];
+
+              const sTag = priceElement.querySelector('s');
+              if (sTag) {
+                // Keep the strikethrough, update content with muted styling
+                if (this.settings.showOriginal) {
+                  sTag.innerHTML = `<span style="font-weight: 600;">${formattedRounded} €</span> <span style="font-size: 0.85em; opacity: 0.7;">(${originalText})</span>`;
+                } else {
+                  sTag.innerHTML = `<span style="font-weight: 600;">${formattedRounded} €</span>`;
+                }
+                Utils.markAsProcessed(priceElement);
+              } else {
+                // No <s> tag, replace content but preserve the element structure
+                const formattedRounded = Utils.formatPrice(roundedPrice);
+
+                if (this.settings.showOriginal) {
+                  priceElement.innerHTML = `<span style="font-weight: bold; color: #2563eb;">${formattedRounded} €</span> <span style="font-size: 0.75em; color: #888;">(${originalText})</span>`;
+                } else {
+                  priceElement.innerHTML = `<span style="font-weight: bold; color: #2563eb;">${formattedRounded} €</span>`;
+                }
+                Utils.markAsProcessed(priceElement);
+              }
+              return;
             }
-
-            Utils.markAsProcessed(priceElement);
-            return;
           }
         }
 
@@ -652,11 +719,12 @@
    * Initializes the extension
    */
   function initialize() {
-    chrome.storage.sync.get(['enabled', 'roundingMode', 'showOriginal'], function(result) {
+    chrome.storage.sync.get(['enabled', 'roundingMode', 'showOriginal', 'centsThreshold'], function(result) {
       settings = Utils.validateSettings({
         enabled: result.enabled,
         roundingMode: result.roundingMode,
-        showOriginal: result.showOriginal
+        showOriginal: result.showOriginal,
+        centsThreshold: result.centsThreshold
       });
 
       handlers = {
@@ -684,12 +752,15 @@
       while (parent && parent !== document.body) {
         if (parent.classList?.contains('a-price')) return;
         if (parent.classList?.contains('c-price') || parent.classList?.contains('c-price-s')) return;
+        if (parent.classList?.contains('c-buybox__price')) return; // Cdiscount buybox
         if (parent.classList?.contains('f-faPriceBox__price')) return;
         if (parent.classList?.contains('price-rounder-modified')) return;
         if (parent.classList?.contains('VbBaOe')) return; // Google Shopping prices
         if (parent.hasAttribute?.('data-price-rounded')) return;
         // Skip if parent is a strikethrough price (often old prices on Amazon)
         if (parent.tagName === 'S' || parent.classList?.contains('a-text-strike')) return;
+        // Skip Cdiscount specific containers
+        if (parent.classList?.contains('c-buybox__block')) return;
         parent = parent.parentElement;
       }
 
@@ -706,7 +777,7 @@
           const originalPrice = match[1];
           const price = Utils.normalizePrice(originalPrice);
 
-          if (price !== null && Utils.shouldRoundPrice(price)) {
+          if (price !== null && Utils.shouldRoundPrice(price, settings.centsThreshold)) {
             const roundedPrice = Utils.roundPrice(price, settings.roundingMode);
 
             if (roundedPrice !== price) {
@@ -852,6 +923,10 @@
       }
       if (changes.showOriginal) {
         settings.showOriginal = changes.showOriginal.newValue;
+        location.reload();
+      }
+      if (changes.centsThreshold) {
+        settings.centsThreshold = changes.centsThreshold.newValue;
         location.reload();
       }
     } catch (error) {

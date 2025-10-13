@@ -298,6 +298,20 @@
       </div>
 
       <div class="setting">
+        <label for="centsThreshold">Cents Threshold</label>
+        <div class="label-description">Only round prices with cents at or above this value</div>
+        <div class="select-wrapper">
+          <select id="centsThreshold">
+            <option value="0">Round all prices (0)</option>
+            <option value="50">Round .50 and above</option>
+            <option value="80">Round .80 and above</option>
+            <option value="90">Round .90 and above</option>
+            <option value="95">Round .95 and above</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="setting">
         <div class="toggle-container">
           <div class="toggle-label">
             <label for="showOriginal">Show Original Price</label>
