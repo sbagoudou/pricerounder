@@ -441,6 +441,68 @@
       this.markProcessing(priceElement);
 
       try {
+        // Skip mention/comparison prices (Amazon prices, etc.)
+        if (priceElement.classList.contains('c-price--mention')) {
+          Utils.unmarkAsProcessed(priceElement);
+          return;
+        }
+
+        // Handle structure like "16€<span itemprop='priceCurrency'>99</span>"
+        const currencySpan = priceElement.querySelector('span[itemprop="priceCurrency"]');
+        if (currencySpan && !currencySpan.textContent.match(/[€$£]/)) {
+          // The currency span actually contains cents, not currency symbol
+          const textNodes = Array.from(priceElement.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
+
+          if (textNodes.length > 0) {
+            const wholeText = textNodes[0].textContent.trim();
+            const centsText = currencySpan.textContent.trim();
+
+            // Parse something like "16€" and "99"
+            const wholeMatch = wholeText.match(/(\d+)€?/);
+            if (wholeMatch && centsText.match(/^\d{2}$/)) {
+              const priceStr = wholeMatch[1] + '.' + centsText;
+              const price = Utils.normalizePrice(priceStr);
+              const originalText = wholeMatch[1] + '€' + centsText;
+
+              if (price !== null && Utils.shouldRoundPrice(price, this.settings.centsThreshold)) {
+                const roundedPrice = Utils.roundPrice(price, this.settings.roundingMode);
+
+                if (roundedPrice !== price) {
+                  const formattedRounded = Utils.formatPrice(roundedPrice);
+
+                  // Update in place with blue styling
+                  const roundedSpan = document.createElement('span');
+                  roundedSpan.style.color = '#2563eb';
+                  roundedSpan.style.fontWeight = 'bold';
+                  roundedSpan.textContent = formattedRounded + '€';
+
+                  // Replace the text node with the styled span
+                  textNodes[0].parentNode.replaceChild(roundedSpan, textNodes[0]);
+                  currencySpan.style.display = 'none';
+
+                  // Add original price if enabled
+                  if (this.settings.showOriginal && !priceElement.querySelector('.price-rounder-original')) {
+                    const originalIndicator = document.createElement('span');
+                    originalIndicator.className = 'price-rounder-original';
+                    originalIndicator.style.fontSize = '0.6em';
+                    originalIndicator.style.color = '#888';
+                    originalIndicator.style.fontWeight = 'normal';
+                    originalIndicator.style.marginLeft = '4px';
+                    originalIndicator.textContent = '(' + originalText + ')';
+                    priceElement.appendChild(originalIndicator);
+                  }
+
+                  Utils.markAsProcessed(priceElement);
+                  return;
+                }
+              }
+
+              Utils.unmarkAsProcessed(priceElement);
+              return;
+            }
+          }
+        }
+
         // Handle the complex nested structure with separate whole and cents parts
         const ariaHidden = priceElement.querySelector('[aria-hidden="true"]');
         const displayPrice = priceElement.querySelector('#DisplayPrice, [id^="DisplayPrice"]');
