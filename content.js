@@ -49,6 +49,7 @@
       amazon: '.a-price',
       fnac: '.f-faPriceBox__price',
       cdiscount: '.c-price, .c-price-s',
+      google: '.VbBaOe, .a8Pemb, .e10twf, .HRLxBb, .dD87zc, [data-sh-or], .qptdjc',
     },
 
     // Data attributes used for price storage
@@ -101,29 +102,49 @@
      */
     normalizePrice(priceStr) {
       try {
+        // Remove currency symbols and trim
         priceStr = priceStr.replace(/[€$£]/g, '').trim();
+        // Remove non-breaking spaces and regular spaces
         priceStr = priceStr.replace(/\u00A0/g, '').replace(/\s/g, '');
 
+        // Handle mixed comma and dot (e.g., "1.234,56" or "1,234.56")
         if (priceStr.includes(',') && priceStr.includes('.')) {
+          // If comma comes after dot, it's European format (1.234,56)
           if (priceStr.lastIndexOf(',') > priceStr.lastIndexOf('.')) {
             priceStr = priceStr.replace(/\./g, '').replace(',', '.');
           } else {
+            // US format (1,234.56)
             priceStr = priceStr.replace(/,/g, '');
           }
-        } else if (priceStr.includes(',')) {
+        }
+        // Only comma present
+        else if (priceStr.includes(',')) {
           const parts = priceStr.split(',');
           const afterComma = parts[parts.length - 1];
-          if (afterComma.length <= 2) {
+
+          // If only 2 digits after comma, treat as decimal separator (399,99 → 399.99)
+          if (afterComma.length === 2 && parts.length === 2) {
             priceStr = priceStr.replace(',', '.');
-          } else {
+          }
+          // If 1 digit after comma, might be decimal (9,5 → 9.5)
+          else if (afterComma.length === 1 && parts.length === 2) {
+            priceStr = priceStr.replace(',', '.');
+          }
+          // Otherwise, treat as thousands separator (1,234 → 1234)
+          else {
             priceStr = priceStr.replace(/,/g, '');
           }
-        } else if (priceStr.includes('.')) {
+        }
+        // Only dot present
+        else if (priceStr.includes('.')) {
           const parts = priceStr.split('.');
           const afterDot = parts[parts.length - 1];
+
+          // If more than 2 digits after dot, treat as thousands separator
           if (afterDot.length > 2) {
             priceStr = priceStr.replace(/\./g, '');
           }
+          // Otherwise, treat as decimal separator
         }
 
         const parsed = parseFloat(priceStr);
@@ -498,6 +519,64 @@
   }
 
   /**
+   * Handler for Google Shopping prices
+   */
+  class GooglePriceHandler extends BasePriceHandler {
+    process(priceElement) {
+      if (this.shouldSkip(priceElement)) return;
+      this.markProcessing(priceElement);
+
+      try {
+        // Get text content and handle non-breaking spaces
+        let priceText = priceElement.textContent.trim().replace(/\u00A0/g, ' ');
+
+        if (!priceText) {
+          Utils.unmarkAsProcessed(priceElement);
+          return;
+        }
+
+        // Match various Google Shopping price formats
+        // e.g., "399,99 €", "€399.99", "$399.99", "500 €", "399.99"
+        const match = priceText.match(/([€$£])\s?(\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{1,2})?)|(\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{1,2})?)\s?([€$£])?/);
+
+        if (match) {
+          const currency = match[1] || match[4] || '€'; // Default to € if no currency found
+          let priceStr = match[2] || match[3];
+
+          if (!priceStr) {
+            Utils.unmarkAsProcessed(priceElement);
+            return;
+          }
+
+          const price = Utils.normalizePrice(priceStr);
+
+          if (price === null || price === 0) {
+            Utils.unmarkAsProcessed(priceElement);
+            return;
+          }
+
+          const originalDisplay = priceText;
+          const styledPrice = this.processPrice(price, originalDisplay, currency);
+
+          if (styledPrice) {
+            // Replace the element's content with styled price
+            priceElement.innerHTML = '';
+            priceElement.appendChild(styledPrice);
+            Utils.markAsProcessed(priceElement);
+          } else {
+            Utils.unmarkAsProcessed(priceElement);
+          }
+        } else {
+          Utils.unmarkAsProcessed(priceElement);
+        }
+      } catch (error) {
+        console.error('[Price Rounder] Error in Google handler:', error);
+        Utils.unmarkAsProcessed(priceElement);
+      }
+    }
+  }
+
+  /**
    * Handler for simple prices
    */
   class SimplePriceHandler extends BasePriceHandler {
@@ -584,6 +663,7 @@
         amazon: new AmazonPriceHandler(settings),
         cdiscount: new CdiscountPriceHandler(settings),
         fnac: new FnacPriceHandler(settings),
+        google: new GooglePriceHandler(settings),
         simple: new SimplePriceHandler(settings)
       };
 
@@ -678,6 +758,9 @@
 
       const cdiscountPrices = element.querySelectorAll ? element.querySelectorAll(Config.SITE_SPECIFIC_SELECTORS.cdiscount) : [];
       cdiscountPrices.forEach(el => handlers.cdiscount.process(el));
+
+      const googlePrices = element.querySelectorAll ? element.querySelectorAll(Config.SITE_SPECIFIC_SELECTORS.google) : [];
+      googlePrices.forEach(el => handlers.google.process(el));
 
       const allSelectors = [...Config.GENERIC_PRICE_SELECTORS, ...Config.FRENCH_PRICE_SELECTORS];
 
