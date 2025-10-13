@@ -3,50 +3,113 @@
 <head>
   <meta charset="UTF-8">
   <style>
-    body {
-      width: 300px;
-      padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      margin: 0;
+    * {
+      box-sizing: border-box;
     }
-    
-    h1 {
-      font-size: 18px;
-      margin: 0 0 16px 0;
+
+    body {
+      width: 340px;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #1f2937;
     }
-    
-    .setting {
-      margin-bottom: 16px;
+
+    .container {
+      padding: 24px 20px;
     }
-    
-    label {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 14px;
-      font-weight: 500;
-      color: #374151;
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      animation: slideDown 0.4s ease-out;
     }
-    
-    .toggle-container {
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      color: white;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
+      gap: 8px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
+
+    .subtitle {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 400;
+    }
+
+    .settings-card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      animation: fadeInUp 0.5s ease-out;
+    }
+
+    .setting {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #f3f4f6;
+      transition: all 0.3s ease;
+    }
+
+    .setting:last-of-type {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .setting:hover {
+      transform: translateX(2px);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .label-description {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 400;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .toggle-container {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .toggle-label {
+      flex: 1;
+    }
+
     .switch {
       position: relative;
       display: inline-block;
-      width: 48px;
-      height: 24px;
+      width: 52px;
+      height: 28px;
+      flex-shrink: 0;
     }
-    
+
     .switch input {
       opacity: 0;
       width: 0;
       height: 0;
     }
-    
+
     .slider {
       position: absolute;
       cursor: pointer;
@@ -54,114 +117,209 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: #cbd5e1;
-      transition: .3s;
-      border-radius: 24px;
+      background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 28px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
     }
-    
+
+    .slider:hover {
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 0 4px rgba(0,0,0,0.03);
+    }
+
     .slider:before {
       position: absolute;
       content: "";
-      height: 18px;
-      width: 18px;
+      height: 22px;
+      width: 22px;
       left: 3px;
       bottom: 3px;
-      background-color: white;
-      transition: .3s;
+      background: white;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
-    
+
     input:checked + .slider {
-      background-color: #2563eb;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 8px rgba(102, 126, 234, 0.3);
     }
-    
+
     input:checked + .slider:before {
       transform: translateX(24px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
-    
+
+    input:focus + .slider {
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+    }
+
+    .select-wrapper {
+      position: relative;
+    }
+
+    .select-wrapper::after {
+      content: "▼";
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: #6b7280;
+      font-size: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .select-wrapper:hover::after {
+      color: #374151;
+    }
+
     select {
       width: 100%;
-      padding: 8px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
+      padding: 12px 36px 12px 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
       font-size: 14px;
-      background-color: white;
+      font-weight: 500;
+      background-color: #f9fafb;
       cursor: pointer;
+      appearance: none;
+      transition: all 0.3s ease;
+      color: #374151;
     }
-    
+
+    select:hover {
+      border-color: #d1d5db;
+      background-color: white;
+    }
+
     select:focus {
       outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      border-color: #667eea;
+      background-color: white;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
     }
-    
+
     .info {
       margin-top: 16px;
-      padding: 12px;
-      background-color: #eff6ff;
-      border-radius: 6px;
+      padding: 14px;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border-radius: 12px;
       font-size: 12px;
       color: #1e40af;
-      border-left: 3px solid #2563eb;
+      border-left: 4px solid #667eea;
+      line-height: 1.5;
+      animation: fadeInUp 0.6s ease-out;
     }
-    
+
     .status {
       text-align: center;
-      padding: 8px;
-      background-color: #f0fdf4;
+      padding: 12px;
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
       color: #15803d;
-      border-radius: 6px;
-      font-size: 12px;
-      margin-top: 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 16px;
       display: none;
+      animation: slideUp 0.3s ease-out;
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
     }
-    
+
     .status.show {
       display: block;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
   </style>
 </head>
 <body>
-  <h1>⚡ Price Rounder</h1>
-  
-  <div class="setting">
-    <div class="toggle-container">
-      <label for="enabled">Enable Extension</label>
-      <label class="switch">
-        <input type="checkbox" id="enabled" checked>
-        <span class="slider"></span>
-      </label>
+  <div class="container">
+    <div class="header">
+      <h1>⚡ Price Rounder</h1>
+      <div class="subtitle">Smart price rounding for better readability</div>
+    </div>
+
+    <div class="settings-card">
+      <div class="setting">
+        <div class="toggle-container">
+          <div class="toggle-label">
+            <label for="enabled">Enable Extension</label>
+            <div class="label-description">Turn on/off price rounding across all websites</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enabled" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting">
+        <label for="roundingMode">Rounding Mode</label>
+        <div class="select-wrapper">
+          <select id="roundingMode">
+            <option value="up">Always Round Up</option>
+            <option value="nearest">Round to Nearest</option>
+            <option value="nearest5">Round to Nearest 5</option>
+            <option value="nearest10">Round to Nearest 10</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="setting">
+        <div class="toggle-container">
+          <div class="toggle-label">
+            <label for="showOriginal">Show Original Price</label>
+            <div class="label-description">Display the original price alongside rounded value</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="showOriginal" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="info">
+        💡 Refresh the page after changing settings to see the effect.
+      </div>
+
+      <div id="status" class="status">
+        ✓ Settings saved!
+      </div>
     </div>
   </div>
-  
-  <div class="setting">
-    <label for="roundingMode">Rounding Mode</label>
-    <select id="roundingMode">
-      <option value="up">Always Round Up</option>
-      <option value="nearest">Round to Nearest</option>
-      <option value="nearest5">Round to Nearest 5</option>
-      <option value="nearest10">Round to Nearest 10</option>
-    </select>
-  </div>
-  
-  <div class="setting">
-    <div class="toggle-container">
-      <label for="showOriginal">Show Original Price</label>
-      <label class="switch">
-        <input type="checkbox" id="showOriginal" checked>
-        <span class="slider"></span>
-      </label>
-    </div>
-  </div>
-  
-  <div class="info">
-    💡 Refresh the page after changing settings to see the effect.
-  </div>
-  
-  <div id="status" class="status">
-    Settings saved!
-  </div>
-  
+
   <script src="popup.js"></script>
 </body>
 </html>
