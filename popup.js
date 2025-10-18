@@ -1,7 +1,10 @@
 // Popup script for Price Rounder extension
 
+// Firefox compatibility: use browser namespace if available, otherwise use chrome
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
 // Load saved settings
-chrome.storage.sync.get(['enabled', 'roundingMode', 'showOriginal', 'centsThreshold'], function(result) {
+browserAPI.storage.sync.get(['enabled', 'roundingMode', 'showOriginal', 'centsThreshold'], function(result) {
   document.getElementById('enabled').checked = result.enabled !== undefined ? result.enabled : true;
   document.getElementById('roundingMode').value = result.roundingMode || 'up';
   document.getElementById('showOriginal').checked = result.showOriginal !== undefined ? result.showOriginal : true;
@@ -17,7 +20,7 @@ function saveSettings() {
     centsThreshold: parseInt(document.getElementById('centsThreshold').value)
   };
 
-  chrome.storage.sync.set(settings, function() {
+  browserAPI.storage.sync.set(settings, function() {
     // Show saved status
     const status = document.getElementById('status');
     status.classList.add('show');

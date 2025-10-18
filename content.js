@@ -3,6 +3,9 @@
 (function() {
   'use strict';
 
+  // Firefox compatibility: use browser namespace if available, otherwise use chrome
+  const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
   // ============================================================================
   // CONFIG MODULE - Configuration and Constants
   // ============================================================================
@@ -918,7 +921,7 @@
    * Initializes the extension
    */
   function initialize() {
-    chrome.storage.sync.get(['enabled', 'roundingMode', 'showOriginal', 'centsThreshold'], function(result) {
+    browserAPI.storage.sync.get(['enabled', 'roundingMode', 'showOriginal', 'centsThreshold'], function(result) {
       settings = Utils.validateSettings({
         enabled: result.enabled,
         roundingMode: result.roundingMode,
@@ -1114,7 +1117,7 @@
   /**
    * Listens for settings changes
    */
-  chrome.storage.onChanged.addListener(function(changes) {
+  browserAPI.storage.onChanged.addListener(function(changes) {
     try {
       if (changes.enabled) {
         settings.enabled = changes.enabled.newValue;
