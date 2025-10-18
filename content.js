@@ -50,6 +50,7 @@
       fnac: '.f-faPriceBox__price',
       cdiscount: '.c-price, .c-price-s',
       google: '.VbBaOe, .a8Pemb, .e10twf, .HRLxBb, .dD87zc, [data-sh-or], .qptdjc',
+      conforama: 'p[data-component-id="product-tile-price"], .wrapper-price',
     },
 
     // Data attributes used for price storage
@@ -706,6 +707,136 @@
   }
 
   /**
+   * Handler for Conforama prices
+   */
+  class ConforamaPriceHandler extends BasePriceHandler {
+    process(priceElement) {
+      if (this.shouldSkip(priceElement)) return;
+      this.markProcessing(priceElement);
+
+      try {
+        // Conforama has two formats:
+        // 1. Product listing: <span class="font-bold text-2xl">219</span><span class="flex items-start"><span>€</span><span>90</span></span>
+        // 2. Product page: <span class="wrapper-price_int">299</span><span class="wrapper-price_cent">€99</span>
+
+        // Try product page format first (.wrapper-price)
+        const wholeSpanDetail = priceElement.querySelector('.wrapper-price_int');
+        const centsSpanDetail = priceElement.querySelector('.wrapper-price_cent');
+
+        if (wholeSpanDetail && centsSpanDetail) {
+          const wholePart = wholeSpanDetail.textContent.trim();
+          const centsText = centsSpanDetail.textContent.trim();
+
+          // Extract cents (format is "€99" or "€99<span>*</span>")
+          const centsMatch = centsText.match(/€(\d{2})/);
+
+          if (centsMatch) {
+            const centsPart = centsMatch[1];
+            const priceStr = wholePart + '.' + centsPart;
+            const price = Utils.normalizePrice(priceStr);
+
+            if (price !== null && Utils.shouldRoundPrice(price, this.settings.centsThreshold)) {
+              const roundedPrice = Utils.roundPrice(price, this.settings.roundingMode);
+
+              if (roundedPrice !== price) {
+                const formattedRounded = Utils.formatPrice(roundedPrice);
+                const originalText = wholePart + ',' + centsPart + ' €';
+
+                // Update the whole part
+                wholeSpanDetail.textContent = formattedRounded;
+                wholeSpanDetail.style.color = '#2563eb';
+                wholeSpanDetail.style.fontWeight = 'bold';
+
+                // Update the cents part to show just the euro symbol
+                centsSpanDetail.innerHTML = '€';
+                centsSpanDetail.style.color = '#2563eb';
+
+                // Add original price if enabled
+                if (this.settings.showOriginal) {
+                  const originalIndicator = document.createElement('span');
+                  originalIndicator.className = 'price-rounder-original wrapper-price_cent';
+                  originalIndicator.style.fontSize = '0.75em';
+                  originalIndicator.style.color = '#888';
+                  originalIndicator.style.marginLeft = '0.5rem';
+                  originalIndicator.style.display = 'inline';
+                  originalIndicator.textContent = ' (' + originalText + ')';
+                  centsSpanDetail.parentNode.appendChild(originalIndicator);
+                }
+
+                Utils.markAsProcessed(priceElement);
+                return;
+              }
+            }
+          }
+          Utils.unmarkAsProcessed(priceElement);
+          return;
+        }
+
+        // Try product listing format (p[data-component-id="product-tile-price"])
+        const wholeSpan = priceElement.querySelector('span.font-bold.text-2xl');
+        const centsContainer = priceElement.querySelector('span.flex.items-start');
+
+        if (wholeSpan && centsContainer) {
+          const wholePart = wholeSpan.textContent.trim();
+          const centsSpans = centsContainer.querySelectorAll('span');
+
+          // Skip if already processed
+          if (wholePart.includes('€') && wholePart.includes('(')) return;
+
+          let centsPart = '';
+          for (const span of centsSpans) {
+            const text = span.textContent.trim();
+            if (text !== '€' && text.match(/^\d{2}$/)) {
+              centsPart = text;
+              break;
+            }
+          }
+
+          if (centsPart) {
+            const priceStr = wholePart + '.' + centsPart;
+            const price = Utils.normalizePrice(priceStr);
+
+            if (price !== null && Utils.shouldRoundPrice(price, this.settings.centsThreshold)) {
+              const roundedPrice = Utils.roundPrice(price, this.settings.roundingMode);
+
+              if (roundedPrice !== price) {
+                const formattedRounded = Utils.formatPrice(roundedPrice);
+                const originalText = wholePart + ',' + centsPart + ' €';
+
+                // Update the whole part with styled rounded price
+                wholeSpan.textContent = formattedRounded;
+                wholeSpan.style.color = '#2563eb';
+
+                // Update the cents container to show just the euro symbol
+                centsContainer.innerHTML = '<span class="font-bold text-base/8 translate-y-[-0.13em] md:text-lg md:leading-9 md:translate-y-[-0.20em]" style="color: #2563eb;">€</span>';
+
+                // Add original price if enabled
+                if (this.settings.showOriginal) {
+                  const originalIndicator = document.createElement('span');
+                  originalIndicator.className = 'price-rounder-original';
+                  originalIndicator.style.fontSize = '0.75em';
+                  originalIndicator.style.color = '#888';
+                  originalIndicator.style.marginLeft = '0.5rem';
+                  originalIndicator.textContent = '(' + originalText + ')';
+                  priceElement.appendChild(originalIndicator);
+                }
+
+                Utils.markAsProcessed(priceElement);
+                return;
+              }
+            }
+          }
+        }
+
+        Utils.unmarkAsProcessed(priceElement);
+      } catch (error) {
+        console.error('[Price Rounder] Error in Conforama handler:', error);
+        Utils.unmarkAsProcessed(priceElement);
+      }
+    }
+  }
+
+  /**
    * Handler for simple prices
    */
   class SimplePriceHandler extends BasePriceHandler {
@@ -794,6 +925,7 @@
         cdiscount: new CdiscountPriceHandler(settings),
         fnac: new FnacPriceHandler(settings),
         google: new GooglePriceHandler(settings),
+        conforama: new ConforamaPriceHandler(settings),
         simple: new SimplePriceHandler(settings)
       };
 
@@ -899,6 +1031,9 @@
 
       const googlePrices = element.querySelectorAll ? element.querySelectorAll(Config.SITE_SPECIFIC_SELECTORS.google) : [];
       googlePrices.forEach(el => handlers.google.process(el));
+
+      const conforamaPrices = element.querySelectorAll ? element.querySelectorAll(Config.SITE_SPECIFIC_SELECTORS.conforama) : [];
+      conforamaPrices.forEach(el => handlers.conforama.process(el));
 
       const allSelectors = [...Config.GENERIC_PRICE_SELECTORS, ...Config.FRENCH_PRICE_SELECTORS];
 

@@ -98,6 +98,7 @@ Product C: €20 (€19.95)
 - ✅ **Amazon.fr / Amazon.com** - All price formats
 - ✅ **Fnac.com** - Product listings and detail pages
 - ✅ **Cdiscount.com** - Search results and products
+- ✅ **Conforama.fr** - Furniture and home appliances
 - ✅ **Darty.com** - Electronics pricing
 - ✅ **Boulanger.com** - Appliances and tech
 - ✅ **Carrefour.fr** - Online grocery
