@@ -849,7 +849,9 @@
                 newContent.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
               }
 
-              const currencySymbol = match[0].charAt(0);
+              // Extract currency symbol from the matched text
+              const currencyMatch = match[0].match(/[€$£]/);
+              const currencySymbol = currencyMatch ? currencyMatch[0] : '';
               const formattedRounded = Utils.formatPrice(roundedPrice);
               newContent.appendChild(Utils.createStyledPrice(
                 match[0],
