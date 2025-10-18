@@ -1,2 +1,44 @@
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node modules (if added in the future)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Browser extension packaging
+*.zip
+*.crx
+*.xpi
+web-ext-artifacts/
+
+# Build artifacts
+dist/
+build/
+
+# Test coverage
+coverage/
+
+# Temporary files
+*.tmp
+*.log
+
+# Project specific
 icons/convert-svg.html

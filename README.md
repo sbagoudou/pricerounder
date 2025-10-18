@@ -348,76 +348,42 @@ function testNormalization() {
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how you can help:
+Contributions are welcome! We love your input! We want to make contributing to this project as easy and transparent as possible.
 
-### Report Bugs
+This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
 
-1. Check if the issue already exists in [Issues](../../issues)
-2. Create a new issue with:
-   - Browser and version
-   - Website URL where the bug occurs
-   - Screenshots
-   - Console errors (if any)
+Please read our [Contributing Guide](CONTRIBUTING.md) for detailed information on:
+- Reporting bugs
+- Suggesting enhancements
+- Adding support for new sites
+- Submitting pull requests
+- Code style guidelines
 
-### Submit Pull Requests
+### Quick Start for Contributors
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Make your changes following our [code guidelines](CONTRIBUTING.md#code-style-guidelines)
+4. Test thoroughly on multiple sites
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
-### Add Support for New Sites
-
-1. Analyze the site's HTML structure (see `IMPLEMENTATION_GUIDE_FR.md`)
-2. Add site-specific selectors to `Config.FRENCH_PRICE_SELECTORS` in [content.js](content.js)
-3. If needed, create a new handler class extending `BasePriceHandler`:
-   ```javascript
-   class NewSiteHandler extends BasePriceHandler {
-     process(priceElement) {
-       // Site-specific logic here
-     }
-   }
-   ```
-4. Register the handler in the `initialize()` function
-5. Test thoroughly on the target site
-6. Submit PR with examples and screenshots
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed instructions.
 
 ## 📚 Documentation
 
 - **[README.md](./README.md)** - This file (user guide and overview)
-- **[REFACTORING_SUMMARY.md](./REFACTORING_SUMMARY.md)** - Code architecture and refactoring details
-- **[FRENCH_ECOMMERCE_PRICE_STRUCTURES.md](./FRENCH_ECOMMERCE_PRICE_STRUCTURES.md)** - Analysis of top 10 French e-commerce sites
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Contributing guidelines and development setup
+- **[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)** - Community guidelines
+- **[LICENSE](./LICENSE)** - MIT License details
+- **[FRENCH_ECOMMERCE_PRICE_STRUCTURES.md](./FRENCH_ECOMMERCE_PRICE_STRUCTURES.md)** - Analysis of French e-commerce sites
 - **[IMPLEMENTATION_GUIDE_FR.md](./IMPLEMENTATION_GUIDE_FR.md)** - Developer guide with code examples
 - **[HTML_EXAMPLES_FR.md](./HTML_EXAMPLES_FR.md)** - Real-world HTML test cases
 
 ## 📄 License
 
-This project is licensed under the MIT License - see below for details:
-
-```
-MIT License
-
-Copyright (c) 2024 Price Rounder
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
@@ -427,9 +393,11 @@ SOFTWARE.
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](../../issues)
-- **Discussions**: [GitHub Discussions](../../discussions)
-- **Email**: support@pricerounder.com
+- **Bug Reports**: [GitHub Issues](../../issues)
+- **Feature Requests**: [GitHub Issues](../../issues)
+- **Questions**: [GitHub Discussions](../../discussions)
+
+For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 🌟 Star History
 
