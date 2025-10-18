@@ -62,13 +62,13 @@
       'data-montant'
     ],
 
-    // Container elements to skip
+    // Container elements to skip (elements that shouldn't be processed directly)
     CONTAINER_TAGS: ['LI', 'ARTICLE', 'SECTION'],
 
-    // Maximum children count for a price element
+    // Maximum children count for a price element (prevents processing complex container elements)
     MAX_CHILDREN_COUNT: 3,
 
-    // Threshold for detecting cents format
+    // Threshold for detecting cents format (prices >= 1000 are likely in cents: 1999 = 19.99€)
     CENTS_THRESHOLD: 1000,
 
     // Styling configuration
@@ -77,16 +77,19 @@
       originalPrice: 'font-size: 0.75em; color: #888;',
     },
 
+    // Color constants
+    COLORS: {
+      roundedPrice: '#2563eb',
+      originalPrice: '#888',
+    },
+
     // Default settings
     DEFAULT_SETTINGS: {
       enabled: true,
-      roundingMode: 'up',
-      showOriginal: true,
-      centsThreshold: 90
+      roundingMode: 'up', // 'up' | 'nearest' | 'nearest5' | 'nearest10'
+      showOriginal: true, // Show original price in parentheses
+      centsThreshold: 90 // Only round prices where cents >= this value (e.g., 90 rounds .90-.99)
     },
-
-    // Psychological pricing pattern
-    PSYCHOLOGICAL_PRICING_PATTERN: /\.(9[0-9]|[0-9]9)$/,
 
     // Price format regex
     PRICE_FORMAT_REGEX: /([€$£])\s?(\d{1,3}(?:[.,\s]\d{3})*[.,]\d{2})|(\d{1,3}(?:[.,\s]\d{3})*[.,]\d{2})\s?([€$£])/,
@@ -152,7 +155,7 @@
         const parsed = parseFloat(priceStr);
         return isNaN(parsed) ? null : parsed;
       } catch (error) {
-        console.error('[Price Rounder] Error normalizing price:', error);
+        console.error('[Price Rounder] Error normalizing price string:', priceStr, error);
         return null;
       }
     },
@@ -301,12 +304,18 @@
      */
     validateSettings(settings) {
       const validModes = ['up', 'nearest', 'nearest5', 'nearest10'];
-      const validThresholds = [0, 50, 80, 90, 95];
+
+      // Validate centsThreshold: must be a number between 0-99
+      let centsThreshold = 90; // default
+      if (typeof settings.centsThreshold === 'number') {
+        centsThreshold = Math.max(0, Math.min(99, Math.floor(settings.centsThreshold)));
+      }
+
       return {
         enabled: typeof settings.enabled === 'boolean' ? settings.enabled : true,
         roundingMode: validModes.includes(settings.roundingMode) ? settings.roundingMode : 'up',
         showOriginal: typeof settings.showOriginal === 'boolean' ? settings.showOriginal : true,
-        centsThreshold: validThresholds.includes(settings.centsThreshold) ? settings.centsThreshold : 90
+        centsThreshold: centsThreshold
       };
     }
   };
@@ -427,7 +436,7 @@
           Utils.unmarkAsProcessed(priceElement);
         }
       } catch (error) {
-        console.error('[Price Rounder] Error in Amazon handler:', error);
+        console.error('[Price Rounder] Error in Amazon handler processing element:', priceElement, error);
         Utils.unmarkAsProcessed(priceElement);
       }
     }
@@ -473,7 +482,7 @@
 
                   // Update in place with blue styling
                   const roundedSpan = document.createElement('span');
-                  roundedSpan.style.color = '#2563eb';
+                  roundedSpan.style.color = Config.COLORS.roundedPrice;
                   roundedSpan.style.fontWeight = 'bold';
                   roundedSpan.textContent = formattedRounded + '€';
 
@@ -486,7 +495,7 @@
                     const originalIndicator = document.createElement('span');
                     originalIndicator.className = 'price-rounder-original';
                     originalIndicator.style.fontSize = '0.6em';
-                    originalIndicator.style.color = '#888';
+                    originalIndicator.style.color = Config.COLORS.originalPrice;
                     originalIndicator.style.fontWeight = 'normal';
                     originalIndicator.style.marginLeft = '4px';
                     originalIndicator.textContent = '(' + originalText + ')';
@@ -526,7 +535,7 @@
 
               // Update the visible parts with styling
               displayPrice.textContent = formattedRounded;
-              displayPrice.style.color = '#2563eb';
+              displayPrice.style.color = Config.COLORS.roundedPrice;
               displayPrice.style.fontWeight = 'bold';
 
               // Hide the cents part since rounded prices don't have cents
@@ -596,9 +605,9 @@
                 const formattedRounded = Utils.formatPrice(roundedPrice);
 
                 if (this.settings.showOriginal) {
-                  priceElement.innerHTML = `<span style="font-weight: bold; color: #2563eb;">${formattedRounded} €</span> <span style="font-size: 0.75em; color: #888;">(${originalText})</span>`;
+                  priceElement.innerHTML = `<span style="font-weight: bold; color: ${Config.COLORS.roundedPrice};">${formattedRounded} €</span> <span style="font-size: 0.75em; color: ${Config.COLORS.originalPrice};">(${originalText})</span>`;
                 } else {
-                  priceElement.innerHTML = `<span style="font-weight: bold; color: #2563eb;">${formattedRounded} €</span>`;
+                  priceElement.innerHTML = `<span style="font-weight: bold; color: ${Config.COLORS.roundedPrice};">${formattedRounded} €</span>`;
                 }
                 Utils.markAsProcessed(priceElement);
               }
@@ -609,7 +618,7 @@
 
         Utils.unmarkAsProcessed(priceElement);
       } catch (error) {
-        console.error('[Price Rounder] Error in Cdiscount handler:', error);
+        console.error('[Price Rounder] Error in Cdiscount handler processing element:', priceElement, error);
         Utils.unmarkAsProcessed(priceElement);
       }
     }
@@ -642,7 +651,7 @@
           Utils.unmarkAsProcessed(priceElement);
         }
       } catch (error) {
-        console.error('[Price Rounder] Error in Fnac handler:', error);
+        console.error('[Price Rounder] Error in Fnac handler processing element:', priceElement, error);
         Utils.unmarkAsProcessed(priceElement);
       }
     }
@@ -700,7 +709,7 @@
           Utils.unmarkAsProcessed(priceElement);
         }
       } catch (error) {
-        console.error('[Price Rounder] Error in Google handler:', error);
+        console.error('[Price Rounder] Error in Google handler processing element:', priceElement, error);
         Utils.unmarkAsProcessed(priceElement);
       }
     }
@@ -710,6 +719,58 @@
    * Handler for Conforama prices
    */
   class ConforamaPriceHandler extends BasePriceHandler {
+    /**
+     * Helper method to process price and update display
+     */
+    processConforamaPrice(wholePart, centsPart, wholeElement, centsElement, isDetailPage) {
+      const priceStr = wholePart + '.' + centsPart;
+      const price = Utils.normalizePrice(priceStr);
+
+      if (price !== null && Utils.shouldRoundPrice(price, this.settings.centsThreshold)) {
+        const roundedPrice = Utils.roundPrice(price, this.settings.roundingMode);
+
+        if (roundedPrice !== price) {
+          const formattedRounded = Utils.formatPrice(roundedPrice);
+          const originalText = wholePart + ',' + centsPart + ' €';
+
+          // Update the whole part
+          wholeElement.textContent = formattedRounded;
+          wholeElement.style.color = Config.COLORS.roundedPrice;
+          wholeElement.style.fontWeight = 'bold';
+
+          // Update the cents part based on format
+          if (isDetailPage) {
+            centsElement.innerHTML = '€';
+            centsElement.style.color = Config.COLORS.roundedPrice;
+          } else {
+            centsElement.innerHTML = `<span class="font-bold text-base/8 translate-y-[-0.13em] md:text-lg md:leading-9 md:translate-y-[-0.20em]" style="color: ${Config.COLORS.roundedPrice};">€</span>`;
+          }
+
+          // Add original price if enabled
+          if (this.settings.showOriginal) {
+            const originalIndicator = document.createElement('span');
+            originalIndicator.className = isDetailPage ? 'price-rounder-original wrapper-price_cent' : 'price-rounder-original';
+            originalIndicator.style.fontSize = '0.75em';
+            originalIndicator.style.color = Config.COLORS.originalPrice;
+            originalIndicator.style.marginLeft = '0.5rem';
+            if (isDetailPage) {
+              originalIndicator.style.display = 'inline';
+            }
+            originalIndicator.textContent = isDetailPage ? ' (' + originalText + ')' : '(' + originalText + ')';
+
+            if (isDetailPage) {
+              centsElement.parentNode.appendChild(originalIndicator);
+            } else {
+              wholeElement.parentNode.appendChild(originalIndicator);
+            }
+          }
+
+          return true;
+        }
+      }
+      return false;
+    }
+
     process(priceElement) {
       if (this.shouldSkip(priceElement)) return;
       this.markProcessing(priceElement);
@@ -732,40 +793,11 @@
 
           if (centsMatch) {
             const centsPart = centsMatch[1];
-            const priceStr = wholePart + '.' + centsPart;
-            const price = Utils.normalizePrice(priceStr);
+            const processed = this.processConforamaPrice(wholePart, centsPart, wholeSpanDetail, centsSpanDetail, true);
 
-            if (price !== null && Utils.shouldRoundPrice(price, this.settings.centsThreshold)) {
-              const roundedPrice = Utils.roundPrice(price, this.settings.roundingMode);
-
-              if (roundedPrice !== price) {
-                const formattedRounded = Utils.formatPrice(roundedPrice);
-                const originalText = wholePart + ',' + centsPart + ' €';
-
-                // Update the whole part
-                wholeSpanDetail.textContent = formattedRounded;
-                wholeSpanDetail.style.color = '#2563eb';
-                wholeSpanDetail.style.fontWeight = 'bold';
-
-                // Update the cents part to show just the euro symbol
-                centsSpanDetail.innerHTML = '€';
-                centsSpanDetail.style.color = '#2563eb';
-
-                // Add original price if enabled
-                if (this.settings.showOriginal) {
-                  const originalIndicator = document.createElement('span');
-                  originalIndicator.className = 'price-rounder-original wrapper-price_cent';
-                  originalIndicator.style.fontSize = '0.75em';
-                  originalIndicator.style.color = '#888';
-                  originalIndicator.style.marginLeft = '0.5rem';
-                  originalIndicator.style.display = 'inline';
-                  originalIndicator.textContent = ' (' + originalText + ')';
-                  centsSpanDetail.parentNode.appendChild(originalIndicator);
-                }
-
-                Utils.markAsProcessed(priceElement);
-                return;
-              }
+            if (processed) {
+              Utils.markAsProcessed(priceElement);
+              return;
             }
           }
           Utils.unmarkAsProcessed(priceElement);
@@ -793,44 +825,18 @@
           }
 
           if (centsPart) {
-            const priceStr = wholePart + '.' + centsPart;
-            const price = Utils.normalizePrice(priceStr);
+            const processed = this.processConforamaPrice(wholePart, centsPart, wholeSpan, centsContainer, false);
 
-            if (price !== null && Utils.shouldRoundPrice(price, this.settings.centsThreshold)) {
-              const roundedPrice = Utils.roundPrice(price, this.settings.roundingMode);
-
-              if (roundedPrice !== price) {
-                const formattedRounded = Utils.formatPrice(roundedPrice);
-                const originalText = wholePart + ',' + centsPart + ' €';
-
-                // Update the whole part with styled rounded price
-                wholeSpan.textContent = formattedRounded;
-                wholeSpan.style.color = '#2563eb';
-
-                // Update the cents container to show just the euro symbol
-                centsContainer.innerHTML = '<span class="font-bold text-base/8 translate-y-[-0.13em] md:text-lg md:leading-9 md:translate-y-[-0.20em]" style="color: #2563eb;">€</span>';
-
-                // Add original price if enabled
-                if (this.settings.showOriginal) {
-                  const originalIndicator = document.createElement('span');
-                  originalIndicator.className = 'price-rounder-original';
-                  originalIndicator.style.fontSize = '0.75em';
-                  originalIndicator.style.color = '#888';
-                  originalIndicator.style.marginLeft = '0.5rem';
-                  originalIndicator.textContent = '(' + originalText + ')';
-                  priceElement.appendChild(originalIndicator);
-                }
-
-                Utils.markAsProcessed(priceElement);
-                return;
-              }
+            if (processed) {
+              Utils.markAsProcessed(priceElement);
+              return;
             }
           }
         }
 
         Utils.unmarkAsProcessed(priceElement);
       } catch (error) {
-        console.error('[Price Rounder] Error in Conforama handler:', error);
+        console.error('[Price Rounder] Error in Conforama handler processing element:', priceElement, error);
         Utils.unmarkAsProcessed(priceElement);
       }
     }
@@ -896,7 +902,7 @@
           Utils.markAsProcessed(priceElement);
         }
       } catch (error) {
-        console.error('[Price Rounder] Error in Simple handler:', error);
+        console.error('[Price Rounder] Error in Simple handler processing element:', priceElement, error);
       }
     }
   }
