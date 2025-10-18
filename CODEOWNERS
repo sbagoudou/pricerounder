@@ -1,0 +1,16 @@
+# Code Owners for Price Rounder
+# These owners will be automatically requested for review when someone opens a pull request.
+
+# Default owner for everything in the repo
+* @sbagoudou
+
+# Specific ownership for critical files
+/manifest.json @sbagoudou
+/content.js @sbagoudou
+/popup.js @sbagoudou
+
+# Documentation
+*.md @sbagoudou
+
+# GitHub configuration
+/.github/ @sbagoudou

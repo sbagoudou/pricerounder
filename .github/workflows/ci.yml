@@ -1,0 +1,162 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  validate:
+    name: Validate Extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          echo "Checking required extension files..."
+
+          required_files=(
+            "manifest.json"
+            "content.js"
+            "popup.html"
+            "popup.js"
+            "LICENSE"
+            "README.md"
+            "CONTRIBUTING.md"
+            "CODE_OF_CONDUCT.md"
+          )
+
+          missing_files=()
+
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing: $file"
+              missing_files+=("$file")
+            else
+              echo "✅ Found: $file"
+            fi
+          done
+
+          if [ ${#missing_files[@]} -ne 0 ]; then
+            echo ""
+            echo "Error: The following required files are missing:"
+            printf '%s\n' "${missing_files[@]}"
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ All required files present"
+
+      - name: Validate manifest.json
+        run: |
+          echo "Validating manifest.json..."
+
+          if ! jq empty manifest.json 2>/dev/null; then
+            echo "❌ manifest.json is not valid JSON"
+            exit 1
+          fi
+
+          echo "✅ manifest.json is valid JSON"
+
+          # Check required manifest fields
+          required_fields=("manifest_version" "name" "version" "description")
+
+          for field in "${required_fields[@]}"; do
+            if ! jq -e ".$field" manifest.json > /dev/null 2>&1; then
+              echo "❌ Missing required field: $field"
+              exit 1
+            else
+              value=$(jq -r ".$field" manifest.json)
+              echo "✅ Found $field: $value"
+            fi
+          done
+
+          # Verify manifest version 3
+          manifest_version=$(jq -r '.manifest_version' manifest.json)
+          if [ "$manifest_version" != "3" ]; then
+            echo "❌ Expected manifest_version 3, got $manifest_version"
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ manifest.json validation passed"
+
+      - name: Check icon files
+        run: |
+          echo "Checking icon files..."
+
+          icon_files=(
+            "icons/icon16.png"
+            "icons/icon48.png"
+            "icons/icon128.png"
+          )
+
+          missing_icons=()
+
+          for icon in "${icon_files[@]}"; do
+            if [ ! -f "$icon" ]; then
+              echo "⚠️  Missing: $icon"
+              missing_icons+=("$icon")
+            else
+              echo "✅ Found: $icon"
+            fi
+          done
+
+          if [ ${#missing_icons[@]} -ne 0 ]; then
+            echo ""
+            echo "Warning: Some icon files are missing (non-critical):"
+            printf '%s\n' "${missing_icons[@]}"
+          else
+            echo ""
+            echo "✅ All icon files present"
+          fi
+
+      - name: Validate JavaScript syntax
+        run: |
+          echo "Validating JavaScript files..."
+
+          js_files=("content.js" "popup.js")
+
+          # Install Node.js for syntax checking
+          for file in "${js_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "Checking $file..."
+              # Basic syntax check using node
+              if command -v node > /dev/null 2>&1; then
+                if ! node --check "$file" 2>&1; then
+                  echo "❌ Syntax error in $file"
+                  exit 1
+                fi
+                echo "✅ $file syntax valid"
+              else
+                echo "⚠️  Node.js not available, skipping syntax check for $file"
+              fi
+            fi
+          done
+
+          echo ""
+          echo "✅ JavaScript validation passed"
+
+      - name: Check for console.log statements
+        run: |
+          echo "Checking for debug statements..."
+
+          # Allow console.error but warn about console.log
+          if grep -r "console\.log" content.js popup.js 2>/dev/null; then
+            echo "⚠️  Warning: Found console.log statements (consider removing for production)"
+          else
+            echo "✅ No console.log statements found"
+          fi
+
+      - name: Validation Summary
+        run: |
+          echo ""
+          echo "================================"
+          echo "✅ All validation checks passed!"
+          echo "================================"
+          echo ""
+          echo "Extension is ready for review."
