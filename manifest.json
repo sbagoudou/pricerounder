@@ -4,8 +4,7 @@
   "version": "1.0",
   "description": "Rounds psychological pricing to help you see the real price",
   "permissions": [
-    "storage",
-    "activeTab"
+    "storage"
   ],
   "action": {
     "default_popup": "popup.html",
